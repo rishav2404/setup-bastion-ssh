@@ -1,0 +1,63 @@
+name: Setup Bastion SSH
+description: Configure SSH access to a private(target) server through bastion host
+
+inputs:
+  ssh-private-key:
+    required: true
+
+  bastion-host:
+    required: true
+
+  bastion-user:
+    required: true
+
+  bastion-port:
+    required: false
+    default: "22"
+
+  server-host:
+    required: true
+
+  server-user:
+    required: true
+
+  server-port:
+    required: false
+    default: "22"
+
+  strict-host-checking:
+    required: false
+    default: "no"
+
+runs:
+  using: composite
+
+  steps:
+    - name: Configure SSH
+      shell: bash
+      run: |
+        mkdir -p ~/.ssh
+
+        echo "${{ inputs.ssh-private-key }}" > ~/.ssh/ssh-key
+        chmod 600 ~/.ssh/ssh-key
+
+        cat > ~/.ssh/config <<EOF
+        Host bastion
+          HostName ${{ inputs.bastion-host }}
+          User ${{ inputs.bastion-user }}
+          Port ${{ inputs.bastion-port }}
+          IdentityFile ~/.ssh/ssh-key
+          IdentitiesOnly yes
+          StrictHostKeyChecking ${{ inputs.strict-host-checking }}
+
+        Host target
+          HostName ${{ inputs.server-host }}
+          User ${{ inputs.server-user }}
+          Port ${{ inputs.server-port }}
+          ProxyJump bastion
+          IdentityFile ~/.ssh/ssh-key
+          IdentitiesOnly yes
+          StrictHostKeyChecking ${{ inputs.strict-host-checking }}
+        EOF
+
+        chmod 600 ~/.ssh/config
